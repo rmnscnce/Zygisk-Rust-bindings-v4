@@ -11,6 +11,7 @@ use jni::{
     sys::{jint, JNINativeMethod},
     JNIEnv,
 };
+use libc::{dev_t, ino_t};
 
 use crate::binding::{RawApiTable, StateFlags, ZygiskOption};
 
@@ -95,6 +96,19 @@ impl<'a> ZygiskApi<'a> {
             .unwrap_or(StateFlags::empty())
     }
 
+    /// Exempt the provided file descriptor from being automatically closed.
+    ///
+    /// This API only make sense in [`pre_app_specialize`](crate::ZygiskModule::pre_app_specialize);\
+    /// calling this method in any other situation is either a no-op (returns true) or an
+    /// error (returns false).
+    ///
+    /// When false is returned, the provided file descriptor will eventually be closed by zygote.
+    pub fn exempt_fd(&self, fd: RawFd) {
+        if let Some(func) = self.inner.exempt_fd {
+            func(fd);
+        }
+    }
+
     /// Hook JNI native methods for a Java class.
     ///
     /// This looks up all registered JNI native methods and replaces them with your own functions.
@@ -124,11 +138,19 @@ impl<'a> ZygiskApi<'a> {
         }
     }
 
-    /// For ELFs loaded in memory matching `regex`, replace function `symbol` with `new_func`.
+    /// Hook functions in the PLT (Procedure Linkage Table) of ELFs loaded in memory.
     ///
-    /// The type `*mut ()` is used in place of Rust function pointer types.
+    /// Parsing `/proc/[PID]/maps` will give you the memory map of a process. As an example:
     ///
-    /// If `old_func` is not `None`, the original function pointer will be saved to `old_func`.
+    /// ```text
+    ///       <address>       <perms>  <offset>   <dev>  <inode>           <pathname>
+    /// 56b4346000-56b4347000  r-xp    00002000   fe:00    235       /system/bin/app_process64
+    /// ```
+    /// (More details: https://man7.org/linux/man-pages/man5/proc.5.html)
+    ///
+    /// The `dev` and `inode` pair uniquely identifies a file being mapped into memory.
+    /// For matching ELFs loaded in memory, replace function `symbol` with `new_func`.
+    /// If `old_func` is not [`None`], the original function pointer will be saved to `old_func`.
     ///
     /// ## Safety
     ///
@@ -136,31 +158,21 @@ impl<'a> ZygiskApi<'a> {
     /// memory unsafety.
     pub unsafe fn plt_hook_register(
         &self,
-        regex: &CStr,
+        device: dev_t,
+        inode: ino_t,
         symbol: &CStr,
         new_func: *mut (),
         old_func: Option<&mut *mut ()>,
     ) {
         if let Some(func) = self.inner.plt_hook_register {
             func(
-                regex.as_ptr(),
+                device,
+                inode,
                 symbol.as_ptr(),
                 new_func,
                 old_func
                     .map(|r| r as *mut *mut ())
                     .unwrap_or(std::ptr::null_mut()),
-            );
-        }
-    }
-
-    /// For ELFs loaded in memory matching `regex`, exclude hooks registered for `symbol`.
-    ///
-    /// If `symbol` is `None`, then all symbols will be excluded.
-    pub fn plt_hook_exclude(&self, regex: &CStr, symbol: Option<&CStr>) {
-        if let Some(func) = self.inner.plt_hook_exclude {
-            func(
-                regex.as_ptr(),
-                symbol.map(CStr::as_ptr).unwrap_or(std::ptr::null()),
             );
         }
     }
