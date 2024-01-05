@@ -6,12 +6,12 @@ use std::{
     },
 };
 
-use jni::{
+use crate::jni::{
     strings::JNIStr,
     sys::{jint, JNINativeMethod},
     JNIEnv,
 };
-use libc::{dev_t, ino_t};
+use crate::libc::{dev_t, ino_t};
 
 use crate::binding::{RawApiTable, StateFlags, ZygiskOption};
 

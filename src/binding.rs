@@ -1,10 +1,10 @@
 use std::os::raw::*;
 
-use jni::{
+use crate::jni::{
     objects::{JObjectArray, JString},
     sys::*,
 };
-use libc::{dev_t, ino_t};
+use crate::libc::{dev_t, ino_t};
 
 #[allow(non_camel_case_types)]
 type c_bool = bool;
@@ -99,7 +99,7 @@ pub enum ZygiskOption {
     DlcloseModuleLibrary = 1,
 }
 
-bitflags::bitflags! {
+crate::bitflags::bitflags! {
     /// Bit masks of the return value of [ZygiskApi::get_flags()](crate::ZygiskApi::get_flags).
     pub struct StateFlags: u32 {
         /// The user has granted root access to the current process.

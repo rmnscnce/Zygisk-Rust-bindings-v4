@@ -5,6 +5,9 @@ mod error;
 pub mod macros;
 mod module;
 
+mod aux;
+pub use aux::*;
+
 pub use api::ZygiskApi;
 pub use binding::{AppSpecializeArgs, ServerSpecializeArgs, StateFlags, ZygiskOption, API_VERSION};
 pub use error::ZygiskError;

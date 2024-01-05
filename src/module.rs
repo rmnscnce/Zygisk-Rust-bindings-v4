@@ -1,4 +1,4 @@
-use jni::JNIEnv;
+use crate::jni::JNIEnv;
 
 use crate::{
     binding::{ModuleAbi, RawApiTable},
