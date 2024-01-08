@@ -77,22 +77,35 @@ macro_rules! zygisk_module {
 ///
 /// zygisk_companion!(companion_main);
 /// ```
+///
+/// You can also use a closure for brevity as long as it is not capturing any variables from
+/// the surrounding scope:
+///
+/// ```
+/// use zygisk::zygisk_companion;
+///
+/// zygisk_companion!(|socket| {
+///    // ...
+/// });
+/// ```
 #[macro_export]
 macro_rules! zygisk_companion {
-    ($func: path) => {
+    ($func: expr) => {
         #[no_mangle]
         extern "C" fn zygisk_companion_entry(socket_fd: ::std::os::unix::io::RawFd) {
-            use ::std::os::unix::io::FromRawFd;
-
             // SAFETY: it is guaranteed by zygiskd that the argument is a valid
             // socket fd.
-            let stream = unsafe { ::std::os::unix::net::UnixStream::from_raw_fd(socket_fd) };
+            let stream = unsafe {
+                <::std::os::unix::net::UnixStream as ::std::os::fd::FromRawFd>::from_raw_fd(
+                    socket_fd,
+                )
+            };
 
             // Call the actual function.
             let _type_check: fn(::std::os::unix::net::UnixStream) = $func;
-            if let Err(_) = std::panic::catch_unwind(|| $func(stream)) {
+            if let Err(_) = ::std::panic::catch_unwind(|| _type_check(stream)) {
                 // Panic messages should be displayed by the default panic hook.
-                std::process::abort();
+                ::std::process::abort();
             }
 
             // It is both OK for us to close the fd or not to, since zygiskd
