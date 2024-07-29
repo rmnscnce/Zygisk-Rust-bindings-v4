@@ -10,7 +10,7 @@ use crate::libc::{dev_t, ino_t};
 type c_bool = bool;
 type Module = crate::module::RawModule;
 
-pub const API_VERSION: c_long = 3;
+pub const API_VERSION: c_long = 5;
 
 #[repr(C)]
 pub(crate) struct ModuleAbi {
@@ -64,6 +64,7 @@ pub struct AppSpecializeArgs<'a> {
     pub pkg_data_info_list: Option<&'a jobjectArray>,
     pub whitelisted_data_info_list: Option<&'a jobjectArray>,
     pub mount_data_dirs: Option<&'a jboolean>,
+    pub mount_sysprop_overrides: Option<&'a jboolean>,
     pub mount_storage_dirs: Option<&'a jboolean>,
 }
 
